@@ -1,0 +1,18 @@
+{
+  "name": "advanced-ci-cd-workflow",
+  "version": "1.0.0",
+  "description": "A project demonstrating an advanced GitHub Actions pipeline",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint .",
+    "test": "echo 'No tests needed for initial setup' && exit 0",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "typescript": "^5.4.0"
+  }
+}
