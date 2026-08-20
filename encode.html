@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URI Encoder & Decoder</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --primary-color: #0076ff;
+            --border-color: #e1e4e6;
+            --error-color: #ff3b30;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Tabs Navigation */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            margin-bottom: -2px;
+        }
+
+        /* Views */
+        .view-panel {
+            display: none;
+        }
+
+        .view-panel.active {
+            display: block;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 140px;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        textarea[readonly] {
+            background-color: #fafafa;
+            cursor: not-allowed;
+        }
+
+        /* Options bar */
+        .options {
+            background: #fafafa;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .error {
+            color: var(--error-color);
+            font-size: 14px;
+            margin-top: -10px;
+            margin-bottom: 15px;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Navigation Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('encoder-view')">URI Encoder</button>
+        <button class="tab-btn" onclick="switchTab('decoder-view')">URI Decoder</button>
+    </div>
+
+    <!-- ENCODER PANEL -->
+    <div id="encoder-view" class="view-panel active">
+        <div class="options">
+            <span style="font-weight: 600; font-size: 14px;">Mode:</span>
+            <div class="radio-group">
+                <label class="radio-label">
+                    <input type="radio" name="encode-mode" value="component" checked onchange="runEncoder()"> Component (Strict)
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="encode-mode" value="uri" onchange="runEncoder()"> Full URI (Keep structure)
+                </label>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="encodeInput">Plain / Decoded Text Input</label>
+            <textarea id="encodeInput" placeholder="Enter standard text or URL to encode..."></textarea>
+        </div>
+
+        <div class="input-group">
+            <label for="encodeOutput">Encoded Result</label>
+            <textarea id="encodeOutput" readonly placeholder="Encoded output will appear here..."></textarea>
+        </div>
+    </div>
+
+    <!-- DECODER PANEL -->
+    <div id="decoder-view" class="view-panel">
+        <div class="options">
+            <span style="font-weight: 600; font-size: 14px;">Mode:</span>
+            <div class="radio-group">
+                <label class="radio-label">
+                    <input type="radio" name="decode-mode" value="component" checked onchange="runDecoder()"> Component (Strict)
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="decode-mode" value="uri" onchange="runDecoder()"> Full URI
+                </label>
+            </div>
+        </div>
+
+        <div id="decodeError" class="error"></div>
+
+        <div class="input-group">
+            <label for="decodeInput">%-Encoded Input</label>
+            <textarea id="decodeInput" placeholder="Enter percent-encoded string to decode..."></textarea>
+        </div>
+
+        <div class="input-group">
+            <label for="decodeOutput">Decoded Result</label>
+            <textarea id="decodeOutput" readonly placeholder="Decoded output will appear here..."></textarea>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Tab switching engine
+    function switchTab(viewId) {
+        document.querySelectorAll('.view-panel').forEach(panel => panel.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        
+        document.getElementById(viewId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    // Encoder logic
+    const encodeInput = document.getElementById('encodeInput');
+    const encodeOutput = document.getElementById('encodeOutput');
+
+    function runEncoder() {
+        const text = encodeInput.value;
+        if (!text) {
+            encodeOutput.value = '';
+            return;
+        }
+        
+        const mode = document.querySelector('input[name="encode-mode"]:checked').value;
+        if (mode === 'component') {
+            encodeOutput.value = encodeURIComponent(text);
+        } else {
+            encodeOutput.value = encodeURI(text);
+        }
+    }
+
+    // Decoder logic
+    const decodeInput = document.getElementById('decodeInput');
+    const decodeOutput = document.getElementById('decodeOutput');
+    const decodeError = document.getElementById('decodeError');
+
+    function runDecoder() {
+        decodeError.textContent = '';
+        const text = decodeInput.value;
+        if (!text) {
+            decodeOutput.value = '';
+            return;
+        }
+
+        const mode = document.querySelector('input[name="decode-mode"]:checked').value;
+        try {
+            if (mode === 'component') {
+                decodeOutput.value = decodeURIComponent(text);
+            } else {
+                decodeOutput.value = decodeURI(text);
+            }
+        } catch (e) {
+            decodeError.textContent = 'Malformed %-coding string. Unable to decode safely.';
+            decodeOutput.value = '';
+        }
+    }
+
+    // Wiring real-time rendering engine
+    encodeInput.addEventListener('input', runEncoder);
+    decodeInput.addEventListener('input', runDecoder);
+</script>
+
+</body>
+</html>
