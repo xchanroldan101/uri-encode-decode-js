@@ -22,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node version: '20'
+          node-version: '20' # <-- FIXED: Changed from node-size to node-version
 
       - name: Run Linter
         run: npm run lint
@@ -103,4 +103,3 @@ jobs:
         run: |
           echo "Deploying production build..."
           # Insert specific deployment commands (AWS S3, Vercel, Docker Hub push, etc.) here
-          
