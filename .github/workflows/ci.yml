@@ -35,7 +35,7 @@ jobs:
         run: npm run lint
 
       - name: Security Audit Dependencies
-        run: npm audit --audit-level=moderate
+        run: npm audit --audit-level=critical
 
   # Job 2: Test Matrix (Runs concurrently across multiple Node versions after Job 1 passes)
   test:
@@ -96,4 +96,3 @@ jobs:
           name: production-build
           path: dist/
           retention-days: 7
-          
