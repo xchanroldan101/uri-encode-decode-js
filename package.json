@@ -1,53 +1,24 @@
 {
-  "name": "@your-org/advanced-workflow-app",
+  "name": "uri-encode-decode-js",
   "version": "1.0.0",
-  "description": "Production-grade workflow tailored for strict enterprise CI/CD gates.",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "description": "JavaScript web application utility to seamlessly encode and decode Uniform Resource Identifiers (URIs).",
+  "main": "index.html",
   "type": "module",
+  "private": true,
   "engines": {
-    "node": ">=20.0.0",
-    "npm": ">=10.0.0"
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "clean": "rimraf dist coverage",
-    "prebuild": "npm run clean",
-    "build": "tsc",
-    "postbuild": "echo 'Production artifacts built successfully to ./dist'",
-    "preview": "node dist/index.js",
-    "lint": "eslint src/ --max-warnings 0",
-    "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage --coverage.reporter=json --coverage.reporter=text",
-    "prepare": "is-ci || husky"
-  },
-  "dependencies": {
-    "zod": "^3.23.8"
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{js,html,json,md}\"",
+    "format:check": "prettier --check \"**/*.{js,html,json,md}\""
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
-    "@types/node": "^20.14.15",
-    "@vitest/coverage-v8": "^2.0.5",
     "eslint": "^9.9.0",
-    "husky": "^9.1.5",
-    "is-ci": "^3.0.1",
-    "lint-staged": "^15.2.9",
-    "prettier": "^3.3.3",
-    "rimraf": "^6.0.1",
-    "tsx": "^4.17.0",
-    "typescript": "^5.5.4",
-    "typescript-eslint": "^8.2.0",
-    "vitest": "^2.0.5"
-  },
-  "lint-staged": {
-    "src/**/*.{ts,js}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md}": [
-      "prettier --write"
-    ]
+    "globals": "^15.9.0",
+    "prettier": "^3.3.3"
   }
 }
