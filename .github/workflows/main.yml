@@ -1,4 +1,4 @@
-name: Advanced Production CI/CD Pipeline
+name: Production CI/CD Pipeline
 
 on:
   push:
@@ -6,32 +6,39 @@ on:
     paths-ignore:
       - '**.md'
       - 'docs/**'
+      - '.gitignore'
   pull_request:
     branches: [ main ]
   workflow_dispatch:
     inputs:
       debug_mode:
         description: 'Enable verbose logging'
+        type: boolean
         required: false
-        default: 'false'
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   # Job 1: Linting and Static Code Analysis
   lint:
     name: Code Quality & Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js Runtime
         uses: actions/setup-node@v4
         with:
-          node-node-version: '20'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install Dependencies
@@ -44,6 +51,7 @@ jobs:
   test:
     name: Test on Node v${{ matrix.node-version }} (${{ matrix.os }})
     needs: lint
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -57,7 +65,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js Runtime
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
@@ -66,22 +74,24 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run Unit Tests
+      - name: Run Unit & Integration Tests
         run: npm run test:coverage
 
       - name: Upload Coverage Reports
-        if: matrix.os == 'ubuntu-latest' && matrix.node-version == 20
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == 22
         uses: actions/upload-artifact@v4
         with:
           name: code-coverage
           path: coverage/
           retention-days: 7
+          if-no-files-found: error
 
   # Job 3: Protected Security Scanning
   security:
     name: Security Scan (SAST)
     needs: lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -91,24 +101,85 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-  # Job 4: Conditional Deployment to Staging
+  # Job 4: Build Release Artifacts
+  build:
+    name: Build Artifacts
+    needs: [test, security]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install Production Dependencies
+        run: npm ci --only=production
+
+      - name: Compile Application
+        run: npm run build
+
+      - name: Upload Production Tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-build
+          path: dist/
+          retention-days: 30
+          if-no-files-found: error
+
+  # Job 5: Conditional Deployment to Staging
   deploy-staging:
     name: Deploy to Staging Environment
-    needs: [test, security]
+    needs: build
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: staging
       url: https://example.com
     steps:
-      - name: Download Build Artifacts
+      - name: Download Production Build
         uses: actions/download-artifact@v4
         with:
-          name: code-coverage
+          name: production-build
+          path: dist/
+
+      - name: Authenticate to Cloud via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsWorkflowRole
+          aws-region: us-east-1
 
       - name: Deploy to Cloud Provider
         run: |
           echo "Deploying application to Staging environment..."
           echo "Debug status: ${{ github.event.inputs.debug_mode }}"
-        env:
-          DEPLOY_TOKEN: ${{ secrets.STAGING_DEPLOY_TOKEN }}
+
+  # Job 6: Gated Deployment to Production
+  deploy-production:
+    name: Deploy to Production Environment
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://example.com
+    steps:
+      - name: Download Production Build
+        uses: actions/download-artifact@v4
+        with:
+          name: production-build
+          path: dist/
+
+      - name: Authenticate to Cloud via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsProductionRole
+          aws-region: us-east-1
+
+      - name: Deploy to Cloud Provider
+        run: |
+          echo "Deploying application to Production environment..."
