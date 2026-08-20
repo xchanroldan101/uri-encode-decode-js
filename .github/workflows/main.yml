@@ -1,0 +1,43 @@
+name: CI/CD Production Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+  DEPLOY_ENV: production
+
+jobs:
+  build-and-test:
+    name: Code Quality & Testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm test
+
+  deploy:
+    name: Deploy to Cloud
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - run: |
+          echo "Deploying system updates to ${{ env.DEPLOY_ENV }}..."
+          npm run deploy -- --stage ${{ env.DEPLOY_ENV }}
+      - if: always()
+        run: echo "Deployment process completed with status:${{ job.status }}"
+        
